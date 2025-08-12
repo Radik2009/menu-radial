@@ -13,31 +13,48 @@
     --btn-hover: rgba(255,255,255,.18);
     --shadow: 0 6px 24px rgba(0,0,0,.28);
     --radius: 14px;
+
+    /* máscara para esconder o menu do site 360 (ajuste a altura se precisar) */
+    --mask-height: 70px;
   }
 
   html,body{height:100%;margin:0;background:#000;
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
 
   .stage{position:relative;height:100%;width:100%;overflow:hidden}
+
+  /* CAMADAS (Family / Churrasqueira) */
   .layer{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;
     transition:opacity .25s linear;will-change:opacity;pointer-events:none}
+
+  /* VIEWER 360 */
+  .viewer360{position:absolute; inset:0; display:none;}
+  .viewer360 iframe{
+    position:absolute; inset:0; width:100%; height:100%; border:0;
+  }
+  /* Máscara para cobrir o menu do site embutido (sem mexer no conteúdo do site) */
+  .iframe-mask{
+    position:absolute; left:0; right:0; top:0; height:var(--mask-height);
+    background: linear-gradient(180deg, rgba(0,0,0,.95), rgba(0,0,0,.6), transparent 85%);
+    pointer-events:none; z-index:2;
+  }
 
   /* HUD no canto inferior direito (acima do rodapé) */
   .hud{position:fixed;right:2%;bottom:60px;display:flex;gap:10px;align-items:flex-end;z-index:10}
 
-  /* Seletor de ambiente (pílulas) */
-  .env{
+  /* Pílulas de modo (360 / Family / Churrasqueira) */
+  .modes{
     display:flex;gap:6px;padding:6px;background:var(--ui-bg);
     border:1px solid var(--ui-border);border-radius:999px;backdrop-filter:blur(8px);box-shadow:var(--shadow)
   }
-  .env button{
+  .modes button{
     border:1px solid transparent;background:transparent;color:#fff;cursor:pointer;
     padding:6px 12px;border-radius:999px;font-weight:600;letter-spacing:.2px
   }
-  .env button:hover{background:var(--btn-hover)}
-  .env button.active{background:rgba(255,255,255,.16);border-color:var(--ui-border)}
+  .modes button:hover{background:var(--btn-hover)}
+  .modes button.active{background:rgba(255,255,255,.16);border-color:var(--ui-border)}
 
-  /* Atalhos (ícones) */
+  /* Atalhos (ícones) — apenas para Family/Churrasqueira */
   .quick{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:var(--radius);
     backdrop-filter:blur(8px);background:var(--ui-bg);border:1px solid var(--ui-border);box-shadow:var(--shadow)}
   .quick button{width:38px;height:38px;border-radius:50%;border:1px solid var(--ui-border);
@@ -46,7 +63,7 @@
   .quick button:hover{background:var(--btn-hover);border-color:var(--ui-glow);transform:translateY(-1px)}
   .quick button.active{outline:2px solid rgba(255,255,255,.35)}
 
-  /* Dial discreto */
+  /* Dial discreto — apenas para Family/Churrasqueira */
   .dial{position:relative;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;cursor:grab;
     backdrop-filter:blur(8px);background:var(--ui-bg);border:1px solid var(--ui-border);box-shadow:var(--shadow);touch-action:none}
   .dial:active{cursor:grabbing}
@@ -77,28 +94,42 @@
 </head>
 <body>
   <main class="stage" aria-label="Transição de tempo do dia">
-    <!-- As três camadas permanecem; as fontes mudam quando troca o ambiente -->
+    <!-- VIEW 360 (padrão) -->
+    <div id="viewer360" class="viewer360" aria-label="Visualização 360">
+      <iframe
+        id="ifr360"
+        src="https://demo.tzslab.com/selecionar-apartamento"
+        loading="lazy"
+        allowfullscreen
+        referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
+      <!-- Máscara para cobrir o menu do site -->
+      <div class="iframe-mask" aria-hidden="true"></div>
+    </div>
+
+    <!-- CAMADAS de imagens (usadas em Family / Churrasqueira) -->
     <img id="img-day"   class="layer" src="" alt="Dia">
     <img id="img-dusk"  class="layer" src="" alt="Tarde">
     <img id="img-night" class="layer" src="" alt="Noite">
   </main>
 
   <section class="hud" aria-label="Controles">
-    <!-- Seletor de ambiente -->
-    <div class="env" role="tablist" aria-label="Ambientes">
-      <button id="env-family" class="active" role="tab" aria-selected="true">Family Rouse</button>
+    <!-- Pílulas de modo -->
+    <div class="modes" role="tablist" aria-label="Modos">
+      <button id="mode-360" class="active" role="tab" aria-selected="true">360</button>
+      <button id="env-family" role="tab" aria-selected="false">Family Rouse</button>
       <button id="env-churras" role="tab" aria-selected="false">Churrasqueira</button>
     </div>
 
-    <!-- Atalhos de horário -->
-    <div class="quick" role="group" aria-label="Atalhos de tempo">
+    <!-- Atalhos de horário (somem no modo 360) -->
+    <div class="quick" id="quick" role="group" aria-label="Atalhos de tempo" style="display:none">
       <button id="btn-day"   title="Dia"   aria-label="Dia">☀️</button>
       <button id="btn-dusk"  title="Tarde" aria-label="Tarde">🌇</button>
       <button id="btn-night" title="Noite" aria-label="Noite">🌙</button>
     </div>
 
-    <!-- Dial -->
-    <div id="dial" class="dial" aria-label="Controle radial de horário" tabindex="0">
+    <!-- Dial (some no modo 360) -->
+    <div id="dial" class="dial" aria-label="Controle radial de horário" tabindex="0" style="display:none">
       <span class="hint">gire / ← →</span>
       <div class="ring"></div>
       <div id="needle" class="needle" style="transform:rotate(0deg)"></div>
@@ -114,75 +145,58 @@
 <script>
 (function(){
   // === MAPEAMENTO DE IMAGENS POR AMBIENTE ===
-  // Troque pelos seus arquivos reais
   const IMAGENS = {
     'family': {
-      day:   'dia.png',
-      dusk:  'tarde.png',
-      night: 'noite.png'
+      day:   'dia.png',    // manter destino
+      dusk:  'tarde.png',  // manter destino
+      night: 'noite.png'   // manter destino
     },
     'churras': {
-      day:   'cdia.png',
-      dusk:  'ctarde.png',
-      night: 'cnoite.png'
+      day:   'cdia.png',    // manter destino
+      dusk:  'ctarde.png',  // manter destino
+      night: 'cnoite.png'   // manter destino
     }
   };
 
   // ELEMENTOS
+  const viewer360 = document.getElementById('viewer360');
+
   const imgDay   = document.getElementById('img-day');
   const imgDusk  = document.getElementById('img-dusk');
   const imgNight = document.getElementById('img-night');
 
-  const dial   = document.getElementById('dial');
-  const needle = document.getElementById('needle');
+  const dial     = document.getElementById('dial');
+  const needle   = document.getElementById('needle');
   const ariaTime = document.getElementById('aria-time');
 
+  const quick    = document.getElementById('quick');
   const btnDay   = document.getElementById('btn-day');
   const btnDusk  = document.getElementById('btn-dusk');
   const btnNight = document.getElementById('btn-night');
 
+  const mode360   = document.getElementById('mode-360');
   const envFamily = document.getElementById('env-family');
   const envChurras= document.getElementById('env-churras');
 
   // ESTADO
-  let angle = 0;           // 0..360
-  let ambiente = 'family'; // default
+  let angle = 0;         // 0..360
+  let modo  = '360';     // '360' | 'family' | 'churras'
 
   const clamp01 = v => Math.max(0, Math.min(1, v));
 
-  // Carrega fontes conforme o ambiente
-  function carregarAmbiente(nome){
-    ambiente = nome;
-    const srcs = IMAGENS[nome];
-    imgDay.src   = srcs.day;
-    imgDusk.src  = srcs.dusk;
-    imgNight.src = srcs.night;
-
-    // foco visual em pílulas
-    envFamily.classList.toggle('active', nome==='family');
-    envFamily.setAttribute('aria-selected', nome==='family');
-    envChurras.classList.toggle('active', nome==='churras');
-    envChurras.setAttribute('aria-selected', nome==='churras');
-
-    // mantém ângulo atual (não “quebra” a transição)
-    setAngle(angle);
-  }
-
-  // Crossfade entre as 3 camadas
   function setAngle(a){
     angle = (a % 360 + 360) % 360;
     needle.style.transform = `rotate(${angle}deg)`;
     const t = angle / 360;
 
-    const wDay   = clamp01(1 - (t*2));                     // 1 → 0 (0..0.5)
+    const wDay   = clamp01(1 - (t*2));
     const wDusk  = t < 0.5 ? clamp01(t*2) : clamp01(1 - (t-0.5)*2);
-    const wNight = clamp01((t-0.5)*2);                     // 0 → 1 (0.5..1)
+    const wNight = clamp01((t-0.5)*2);
 
     imgDay.style.opacity   = wDay;
     imgDusk.style.opacity  = wDusk;
     imgNight.style.opacity = wNight;
 
-    // estado dos botões
     btnDay.classList.toggle('active',   t < 0.17);
     btnDusk.classList.toggle('active',  t >= 0.17 && t < 0.83);
     btnNight.classList.toggle('active', t >= 0.83);
@@ -190,8 +204,38 @@
     ariaTime.textContent = t < 0.17 ? 'Dia' : (t < 0.83 ? 'Tarde' : 'Noite');
   }
 
-  // Inicializa opacidades
-  imgDay.style.opacity = 1; imgDusk.style.opacity = 0; imgNight.style.opacity = 0;
+  function carregarAmbiente(nome){
+    const srcs = IMAGENS[nome];
+    imgDay.src   = srcs.day;
+    imgDusk.src  = srcs.dusk;
+    imgNight.src = srcs.night;
+    setAngle(angle);
+  }
+
+  function ativarModo(novo){
+    modo = novo;
+
+    // pílulas ativas
+    mode360.classList.toggle('active',   novo==='360');
+    mode360.setAttribute('aria-selected', novo==='360');
+    envFamily.classList.toggle('active', novo==='family');
+    envFamily.setAttribute('aria-selected', novo==='family');
+    envChurras.classList.toggle('active',novo==='churras');
+    envChurras.setAttribute('aria-selected', novo==='churras');
+
+    if(novo==='360'){
+      // mostrar o 360, esconder camadas e controles de horário
+      viewer360.style.display = 'block';
+      imgDay.style.display = imgDusk.style.display = imgNight.style.display = 'none';
+      dial.style.display = quick.style.display = 'none';
+    } else {
+      // mostrar imagens + controles; esconder 360
+      viewer360.style.display = 'none';
+      imgDay.style.display = imgDusk.style.display = imgNight.style.display = 'block';
+      dial.style.display = quick.style.display = 'grid';
+      carregarAmbiente(novo);
+    }
+  }
 
   // Interações do dial
   let dragging = false;
@@ -201,8 +245,8 @@
     const cy = rect.top + rect.height/2;
     const x = ('touches' in e ? e.touches[0].clientX : e.clientX) - cx;
     const y = ('touches' in e ? e.touches[0].clientY : e.clientY) - cy;
-    let deg = Math.atan2(y, x) * 180/Math.PI; // -180..180 (3h=0)
-    deg = deg + 90; // topo = 0°
+    let deg = Math.atan2(y, x) * 180/Math.PI;
+    deg = deg + 90;
     setAngle(deg);
   }
   dial.addEventListener('pointerdown', e => {
@@ -229,21 +273,23 @@
   btnDusk .addEventListener('click', ()=> setAngle(180));
   btnNight.addEventListener('click', ()=> setAngle(359.9));
 
-  // Troca de ambiente
-  envFamily.addEventListener('click', ()=> carregarAmbiente('family'));
-  envChurras.addEventListener('click',()=> carregarAmbiente('churras'));
+  // Troca de modo
+  mode360   .addEventListener('click', ()=> ativarModo('360'));
+  envFamily .addEventListener('click', ()=> ativarModo('family'));
+  envChurras.addEventListener('click', ()=> ativarModo('churras'));
 
-  // API opcional para mudar fontes via código
+  // API opcional para atualizar fontes via código
   window.setSourcesFor = (env, {day,dusk,night}={})=>{
     if(!IMAGENS[env]) IMAGENS[env] = {};
-    if(day)  IMAGENS[env].day  = day;
-    if(dusk) IMAGENS[env].dusk = dusk;
-    if(night)IMAGENS[env].night= night;
-    if(env===ambiente) carregarAmbiente(env);
+    if(day)  IMAGENS[env].day  = day;    // manter destino
+    if(dusk) IMAGENS[env].dusk = dusk;   // manter destino
+    if(night)IMAGENS[env].night= night;  // manter destino
+    if(env===modo) carregarAmbiente(env);
   };
 
-  // Start
-  carregarAmbiente('family');
+  // Start: 360 como principal
+  ativarModo('360');
+  // define um ângulo inicial caso mude para ambientes
   setAngle(12);
 })();
 </script>
