@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Radial Day → Dusk → Night</title>
+<title>Ambientes • Radial Dia → Tarde → Noite</title>
 <style>
   :root{
     --ui-bg: rgba(18,18,20,.55);
@@ -15,187 +15,89 @@
     --radius: 14px;
   }
 
-  html,body{
-    height:100%;
-    margin:0;
-    background:#000;
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;
-  }
+  html,body{height:100%;margin:0;background:#000;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
 
-  .stage{
-    position:relative;
-    height:100%;
-    width:100%;
-    overflow:hidden;
-  }
+  .stage{position:relative;height:100%;width:100%;overflow:hidden}
+  .layer{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;
+    transition:opacity .25s linear;will-change:opacity;pointer-events:none}
 
-  .layer{
-    position:absolute; inset:0;
-    object-fit:cover;
-    width:100%; height:100%;
-    transition:opacity .25s linear;
-    will-change:opacity;
-    pointer-events:none;
-  }
+  /* HUD no canto inferior direito (acima do rodapé) */
+  .hud{position:fixed;right:2%;bottom:60px;display:flex;gap:10px;align-items:flex-end;z-index:10}
 
-  .hud{
-    position:fixed;
-    right:2%;
-    bottom:60px; /* espaço para o rodapé */
-    display:flex;
-    gap:10px;
-    align-items:flex-end;
-    z-index:10;
+  /* Seletor de ambiente (pílulas) */
+  .env{
+    display:flex;gap:6px;padding:6px;background:var(--ui-bg);
+    border:1px solid var(--ui-border);border-radius:999px;backdrop-filter:blur(8px);box-shadow:var(--shadow)
   }
-
-  .quick{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    padding:10px;
-    border-radius:var(--radius);
-    backdrop-filter: blur(8px);
-    background:var(--ui-bg);
-    border:1px solid var(--ui-border);
-    box-shadow: var(--shadow);
+  .env button{
+    border:1px solid transparent;background:transparent;color:#fff;cursor:pointer;
+    padding:6px 12px;border-radius:999px;font-weight:600;letter-spacing:.2px
   }
+  .env button:hover{background:var(--btn-hover)}
+  .env button.active{background:rgba(255,255,255,.16);border-color:var(--ui-border)}
 
-  .quick button{
-    width:38px; height:38px;
-    border-radius:50%;
-    border:1px solid var(--ui-border);
-    background:var(--btn-bg);
-    color:#fff;
-    display:grid;
-    place-items:center;
-    cursor:pointer;
-    font-size:18px;
-    transition:transform .12s ease, background .15s ease, border-color .15s ease;
-  }
+  /* Atalhos (ícones) */
+  .quick{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:var(--radius);
+    backdrop-filter:blur(8px);background:var(--ui-bg);border:1px solid var(--ui-border);box-shadow:var(--shadow)}
+  .quick button{width:38px;height:38px;border-radius:50%;border:1px solid var(--ui-border);
+    background:var(--btn-bg);color:#fff;display:grid;place-items:center;cursor:pointer;font-size:18px;
+    transition:transform .12s ease, background .15s ease, border-color .15s ease}
+  .quick button:hover{background:var(--btn-hover);border-color:var(--ui-glow);transform:translateY(-1px)}
+  .quick button.active{outline:2px solid rgba(255,255,255,.35)}
 
-  .quick button:hover{
-    background:var(--btn-hover);
-    border-color:var(--ui-glow);
-    transform:translateY(-1px)
-  }
+  /* Dial discreto */
+  .dial{position:relative;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;cursor:grab;
+    backdrop-filter:blur(8px);background:var(--ui-bg);border:1px solid var(--ui-border);box-shadow:var(--shadow);touch-action:none}
+  .dial:active{cursor:grabbing}
+  .ring{position:absolute;inset:8px;border-radius:50%;border:2px solid rgba(255,255,255,.22)}
+  .needle{position:absolute;width:2px;height:28px;top:8px;left:50%;transform-origin:50% 28px;background:#fff;
+    border-radius:2px;opacity:.9;box-shadow:0 0 8px rgba(255,255,255,.5)}
+  .dial::after{content:"";position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from -90deg,rgba(255,255,255,.15) 0 2deg,transparent 2deg 120deg,
+      rgba(255,255,255,.15) 120deg 122deg,transparent 122deg 240deg,
+      rgba(255,255,255,.15) 240deg 242deg,transparent 242deg 360deg);
+    mask:radial-gradient(circle at 50% 50%,transparent 30px,#000 30px);pointer-events:none}
+  .hint{position:absolute;bottom:100%;right:0;transform:translateY(-8px);font-size:12px;color:#fff;opacity:.7;
+    background:rgba(0,0,0,.35);padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);white-space:nowrap}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 
-  .quick button.active{
-    outline:2px solid rgba(255,255,255,.35)
-  }
-
-  .dial{
-    position:relative;
-    width:72px; height:72px;
-    border-radius:50%;
-    display:grid; place-items:center;
-    cursor:grab;
-    backdrop-filter: blur(8px);
-    background:var(--ui-bg);
-    border:1px solid var(--ui-border);
-    box-shadow: var(--shadow);
-    touch-action:none;
-  }
-
-  .dial:active{ cursor:grabbing }
-
-  .ring{
-    position:absolute;
-    inset:8px;
-    border-radius:50%;
-    border:2px solid rgba(255,255,255,.22);
-  }
-
-  .needle{
-    position:absolute;
-    width:2px; height:28px;
-    top:8px; left:50%;
-    transform-origin:50% 28px;
-    background:#fff;
-    border-radius:2px;
-    opacity:.9;
-    box-shadow:0 0 8px rgba(255,255,255,.5);
-  }
-
-  .dial::after{
-    content:"";
-    position:absolute; inset:0;
-    border-radius:50%;
-    background:
-      conic-gradient(from -90deg,
-        rgba(255,255,255,.15) 0 2deg, transparent 2deg 120deg,
-        rgba(255,255,255,.15) 120deg 122deg, transparent 122deg 240deg,
-        rgba(255,255,255,.15) 240deg 242deg, transparent 242deg 360deg);
-    mask: radial-gradient(circle at 50% 50%, transparent 30px, #000 30px);
-    pointer-events:none;
-  }
-
-  .hint{
-    position:absolute;
-    bottom:100%;
-    right:0;
-    transform:translateY(-8px);
-    font-size:12px;
-    color:#fff;
-    opacity:.7;
-    background:rgba(0,0,0,.35);
-    padding:4px 8px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.12);
-    white-space:nowrap;
-  }
-
-  .sr-only{
-    position:absolute;
-    width:1px; height:1px;
-    padding:0; margin:-1px;
-    overflow:hidden;
-    clip:rect(0,0,0,0);
-    border:0
-  }
-
-  footer{
-    position:fixed;
-    bottom:0; left:0; width:100%;
-    background:rgba(0,0,0,.75);
-    color:#fff;
-    text-align:center;
-    padding:6px 10px;
-    font-size:14px;
-    font-weight:500;
-    border-top:1px solid rgba(255,255,255,.15);
-  }
-
-  footer a{
-    color:#4da3ff;
-    text-decoration:none;
-  }
-
-  footer a:hover{
-    text-decoration:underline;
-  }
+  footer{position:fixed;bottom:0;left:0;width:100%;background:rgba(0,0,0,.75);color:#fff;text-align:center;
+    padding:6px 10px;font-size:14px;font-weight:500;border-top:1px solid rgba(255,255,255,.15)}
+  footer a{color:#4da3ff;text-decoration:none}
+  footer a:hover{text-decoration:underline}
 
   @media (max-width:520px){
-    .hud{ right:10px; bottom:70px }
-    .dial{ width:64px; height:64px }
-    .needle{ height:24px; top:8px; transform-origin:50% 24px }
-    footer{ font-size:12px; padding:4px }
+    .hud{right:10px;bottom:70px;flex-direction:column;gap:8px}
+    .dial{width:64px;height:64px}
+    .needle{height:24px;top:8px;transform-origin:50% 24px}
+    footer{font-size:12px;padding:4px}
   }
 </style>
 </head>
 <body>
   <main class="stage" aria-label="Transição de tempo do dia">
-    <img id="img-day"   class="layer" src="dia.png" alt="Dia">
-    <img id="img-dusk"  class="layer" src="tarde.png" alt="Tarde">
-    <img id="img-night" class="layer" src="noite.png" alt="Noite">
+    <!-- As três camadas permanecem; as fontes mudam quando troca o ambiente -->
+    <img id="img-day"   class="layer" src="" alt="Dia">
+    <img id="img-dusk"  class="layer" src="" alt="Tarde">
+    <img id="img-night" class="layer" src="" alt="Noite">
   </main>
 
   <section class="hud" aria-label="Controles">
+    <!-- Seletor de ambiente -->
+    <div class="env" role="tablist" aria-label="Ambientes">
+      <button id="env-family" class="active" role="tab" aria-selected="true">Family Rouse</button>
+      <button id="env-churras" role="tab" aria-selected="false">Churrasqueira</button>
+    </div>
+
+    <!-- Atalhos de horário -->
     <div class="quick" role="group" aria-label="Atalhos de tempo">
       <button id="btn-day"   title="Dia"   aria-label="Dia">☀️</button>
       <button id="btn-dusk"  title="Tarde" aria-label="Tarde">🌇</button>
       <button id="btn-night" title="Noite" aria-label="Noite">🌙</button>
     </div>
 
+    <!-- Dial -->
     <div id="dial" class="dial" aria-label="Controle radial de horário" tabindex="0">
       <span class="hint">gire / ← →</span>
       <div class="ring"></div>
@@ -205,42 +107,93 @@
   </section>
 
   <footer>
-    <span>Meu LinkedIn: <a href="https://www.linkedin.com/in/raiquesilva/" target="_blank">www.linkedin.com/in/raiquesilva/</a></span>
+    Meu LinkedIn:
+    <a href="https://www.linkedin.com/in/raiquesilva/" target="_blank">www.linkedin.com/in/raiquesilva/</a>
   </footer>
 
 <script>
 (function(){
-  const day  = document.getElementById('img-day');
-  const dusk = document.getElementById('img-dusk');
-  const night= document.getElementById('img-night');
-  const dial = document.getElementById('dial');
+  // === MAPEAMENTO DE IMAGENS POR AMBIENTE ===
+  // Troque pelos seus arquivos reais
+  const IMAGENS = {
+    'family': {
+      day:   'dia.png',
+      dusk:  'tarde.png',
+      night: 'noite.png'
+    },
+    'churras': {
+      day:   'cdia.png',
+      dusk:  'ctarde.png',
+      night: 'cnoite.png'
+    }
+  };
+
+  // ELEMENTOS
+  const imgDay   = document.getElementById('img-day');
+  const imgDusk  = document.getElementById('img-dusk');
+  const imgNight = document.getElementById('img-night');
+
+  const dial   = document.getElementById('dial');
   const needle = document.getElementById('needle');
   const ariaTime = document.getElementById('aria-time');
-  const bDay  = document.getElementById('btn-day');
-  const bDusk = document.getElementById('btn-dusk');
-  const bNight= document.getElementById('btn-night');
 
-  let angle = 0;
+  const btnDay   = document.getElementById('btn-day');
+  const btnDusk  = document.getElementById('btn-dusk');
+  const btnNight = document.getElementById('btn-night');
+
+  const envFamily = document.getElementById('env-family');
+  const envChurras= document.getElementById('env-churras');
+
+  // ESTADO
+  let angle = 0;           // 0..360
+  let ambiente = 'family'; // default
+
   const clamp01 = v => Math.max(0, Math.min(1, v));
 
+  // Carrega fontes conforme o ambiente
+  function carregarAmbiente(nome){
+    ambiente = nome;
+    const srcs = IMAGENS[nome];
+    imgDay.src   = srcs.day;
+    imgDusk.src  = srcs.dusk;
+    imgNight.src = srcs.night;
+
+    // foco visual em pílulas
+    envFamily.classList.toggle('active', nome==='family');
+    envFamily.setAttribute('aria-selected', nome==='family');
+    envChurras.classList.toggle('active', nome==='churras');
+    envChurras.setAttribute('aria-selected', nome==='churras');
+
+    // mantém ângulo atual (não “quebra” a transição)
+    setAngle(angle);
+  }
+
+  // Crossfade entre as 3 camadas
   function setAngle(a){
     angle = (a % 360 + 360) % 360;
     needle.style.transform = `rotate(${angle}deg)`;
     const t = angle / 360;
-    const wDay  = clamp01(1 - (t*2));
-    const wDusk = t < 0.5 ? clamp01(t*2) : clamp01(1 - (t-0.5)*2);
-    const wNight= clamp01((t-0.5)*2);
-    day.style.opacity   = wDay;
-    dusk.style.opacity  = wDusk;
-    night.style.opacity = wNight;
-    bDay.classList.toggle('active',  t < 0.17);
-    bDusk.classList.toggle('active', t >= 0.17 && t < 0.83);
-    bNight.classList.toggle('active',t >= 0.83);
+
+    const wDay   = clamp01(1 - (t*2));                     // 1 → 0 (0..0.5)
+    const wDusk  = t < 0.5 ? clamp01(t*2) : clamp01(1 - (t-0.5)*2);
+    const wNight = clamp01((t-0.5)*2);                     // 0 → 1 (0.5..1)
+
+    imgDay.style.opacity   = wDay;
+    imgDusk.style.opacity  = wDusk;
+    imgNight.style.opacity = wNight;
+
+    // estado dos botões
+    btnDay.classList.toggle('active',   t < 0.17);
+    btnDusk.classList.toggle('active',  t >= 0.17 && t < 0.83);
+    btnNight.classList.toggle('active', t >= 0.83);
+
     ariaTime.textContent = t < 0.17 ? 'Dia' : (t < 0.83 ? 'Tarde' : 'Noite');
   }
 
-  day.style.opacity = 1; dusk.style.opacity = 0; night.style.opacity = 0;
+  // Inicializa opacidades
+  imgDay.style.opacity = 1; imgDusk.style.opacity = 0; imgNight.style.opacity = 0;
 
+  // Interações do dial
   let dragging = false;
   function pointToAngle(e){
     const rect = dial.getBoundingClientRect();
@@ -248,8 +201,8 @@
     const cy = rect.top + rect.height/2;
     const x = ('touches' in e ? e.touches[0].clientX : e.clientX) - cx;
     const y = ('touches' in e ? e.touches[0].clientY : e.clientY) - cy;
-    let deg = Math.atan2(y, x) * 180/Math.PI;
-    deg = deg + 90;
+    let deg = Math.atan2(y, x) * 180/Math.PI; // -180..180 (3h=0)
+    deg = deg + 90; // topo = 0°
     setAngle(deg);
   }
   dial.addEventListener('pointerdown', e => {
@@ -271,16 +224,26 @@
     if(e.key==='End')        { setAngle(359.9); e.preventDefault(); }
   });
 
-  bDay .addEventListener('click', ()=> setAngle(0));
-  bDusk.addEventListener('click', ()=> setAngle(180));
-  bNight.addEventListener('click',()=> setAngle(359.9));
+  // Atalhos de horário
+  btnDay  .addEventListener('click', ()=> setAngle(0));
+  btnDusk .addEventListener('click', ()=> setAngle(180));
+  btnNight.addEventListener('click', ()=> setAngle(359.9));
 
-  window.setSources = ({day:sd,dusk:sk,night:sn})=>{
-    if(sd) day.src = sd;
-    if(sk) dusk.src = sk;
-    if(sn) night.src = sn;
+  // Troca de ambiente
+  envFamily.addEventListener('click', ()=> carregarAmbiente('family'));
+  envChurras.addEventListener('click',()=> carregarAmbiente('churras'));
+
+  // API opcional para mudar fontes via código
+  window.setSourcesFor = (env, {day,dusk,night}={})=>{
+    if(!IMAGENS[env]) IMAGENS[env] = {};
+    if(day)  IMAGENS[env].day  = day;
+    if(dusk) IMAGENS[env].dusk = dusk;
+    if(night)IMAGENS[env].night= night;
+    if(env===ambiente) carregarAmbiente(env);
   };
 
+  // Start
+  carregarAmbiente('family');
   setAngle(12);
 })();
 </script>
