@@ -13,9 +13,7 @@
     --btn-hover: rgba(255,255,255,.18);
     --shadow: 0 6px 24px rgba(0,0,0,.28);
     --radius: 14px;
-
-    /* máscara para esconder o menu do site 360 (ajuste a altura se precisar) */
-    --mask-height: 70px;
+    --mask-height: 0px; /* se quiser mascarar algo do embed, aumente */
   }
 
   html,body{height:100%;margin:0;background:#000;
@@ -27,16 +25,13 @@
   .layer{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;
     transition:opacity .25s linear;will-change:opacity;pointer-events:none}
 
-  /* VIEWER 360 */
-  .viewer360{position:absolute; inset:0; display:none;}
-  .viewer360 iframe{
-    position:absolute; inset:0; width:100%; height:100%; border:0;
-  }
-  /* Máscara para cobrir o menu do site embutido (sem mexer no conteúdo do site) */
+  /* VIEWER 360 (Sketchfab) */
+  #viewer360{position:absolute; inset:0; display:block; z-index:1;}
+  #viewer360 iframe{position:absolute; inset:0; width:100%; height:100%; border:0; pointer-events:auto;}
   .iframe-mask{
     position:absolute; left:0; right:0; top:0; height:var(--mask-height);
     background: linear-gradient(180deg, rgba(0,0,0,.95), rgba(0,0,0,.6), transparent 85%);
-    pointer-events:none; z-index:2;
+    pointer-events:none; z-index:2; display: none; /* deixe 'block' se usar máscara */
   }
 
   /* HUD no canto inferior direito (acima do rodapé) */
@@ -54,7 +49,7 @@
   .modes button:hover{background:var(--btn-hover)}
   .modes button.active{background:rgba(255,255,255,.16);border-color:var(--ui-border)}
 
-  /* Atalhos (ícones) — apenas para Family/Churrasqueira */
+  /* Atalhos (ícones) — só para Family/Churrasqueira */
   .quick{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:var(--radius);
     backdrop-filter:blur(8px);background:var(--ui-bg);border:1px solid var(--ui-border);box-shadow:var(--shadow)}
   .quick button{width:38px;height:38px;border-radius:50%;border:1px solid var(--ui-border);
@@ -63,7 +58,7 @@
   .quick button:hover{background:var(--btn-hover);border-color:var(--ui-glow);transform:translateY(-1px)}
   .quick button.active{outline:2px solid rgba(255,255,255,.35)}
 
-  /* Dial discreto — apenas para Family/Churrasqueira */
+  /* Dial discreto — só para Family/Churrasqueira */
   .dial{position:relative;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;cursor:grab;
     backdrop-filter:blur(8px);background:var(--ui-bg);border:1px solid var(--ui-border);box-shadow:var(--shadow);touch-action:none}
   .dial:active{cursor:grabbing}
@@ -95,22 +90,27 @@
 <body>
   <main class="stage" aria-label="Transição de tempo do dia">
     <!-- VIEW 360 (padrão) -->
-    <div id="viewer360" class="viewer360" aria-label="Visualização 360">
-      <iframe
-        id="ifr360"
-        src="https://demo.tzslab.com/selecionar-apartamento"
-        loading="lazy"
-        allowfullscreen
-        referrerpolicy="no-referrer-when-downgrade">
+    <div id="viewer360" class="sketchfab-embed-wrapper">
+      <iframe 
+        title="CANARIAS CLUB CONDOMINIO / Megaplataforma" 
+        frameborder="0" 
+        allowfullscreen 
+        mozallowfullscreen="true" 
+        webkitallowfullscreen="true" 
+        allow="autoplay; fullscreen; xr-spatial-tracking" 
+        xr-spatial-tracking 
+        execution-while-out-of-viewport 
+        execution-while-not-rendered 
+        web-share 
+        src="https://sketchfab.com/models/3c2dca22320647fb82ba9e5f7f2f06e5/embed">
       </iframe>
-      <!-- Máscara para cobrir o menu do site -->
       <div class="iframe-mask" aria-hidden="true"></div>
     </div>
 
     <!-- CAMADAS de imagens (usadas em Family / Churrasqueira) -->
-    <img id="img-day"   class="layer" src="" alt="Dia">
-    <img id="img-dusk"  class="layer" src="" alt="Tarde">
-    <img id="img-night" class="layer" src="" alt="Noite">
+    <img id="img-day"   class="layer" src="" alt="Dia"   style="display:none">
+    <img id="img-dusk"  class="layer" src="" alt="Tarde" style="display:none">
+    <img id="img-night" class="layer" src="" alt="Noite" style="display:none">
   </main>
 
   <section class="hud" aria-label="Controles">
@@ -212,6 +212,20 @@
     setAngle(angle);
   }
 
+  function mostrarImagens(on){
+    if(on){
+      imgDay.style.display = imgDusk.style.display = imgNight.style.display = 'block';
+      dial.style.display = 'grid';
+      quick.style.display = 'grid';
+      viewer360.style.display = 'none';
+    }else{
+      imgDay.style.display = imgDusk.style.display = imgNight.style.display = 'none';
+      dial.style.display = 'none';
+      quick.style.display = 'none';
+      viewer360.style.display = 'block';
+    }
+  }
+
   function ativarModo(novo){
     modo = novo;
 
@@ -224,15 +238,9 @@
     envChurras.setAttribute('aria-selected', novo==='churras');
 
     if(novo==='360'){
-      // mostrar o 360, esconder camadas e controles de horário
-      viewer360.style.display = 'block';
-      imgDay.style.display = imgDusk.style.display = imgNight.style.display = 'none';
-      dial.style.display = quick.style.display = 'none';
+      mostrarImagens(false);
     } else {
-      // mostrar imagens + controles; esconder 360
-      viewer360.style.display = 'none';
-      imgDay.style.display = imgDusk.style.display = imgNight.style.display = 'block';
-      dial.style.display = quick.style.display = 'grid';
+      mostrarImagens(true);
       carregarAmbiente(novo);
     }
   }
@@ -278,18 +286,8 @@
   envFamily .addEventListener('click', ()=> ativarModo('family'));
   envChurras.addEventListener('click', ()=> ativarModo('churras'));
 
-  // API opcional para atualizar fontes via código
-  window.setSourcesFor = (env, {day,dusk,night}={})=>{
-    if(!IMAGENS[env]) IMAGENS[env] = {};
-    if(day)  IMAGENS[env].day  = day;    // manter destino
-    if(dusk) IMAGENS[env].dusk = dusk;   // manter destino
-    if(night)IMAGENS[env].night= night;  // manter destino
-    if(env===modo) carregarAmbiente(env);
-  };
-
   // Start: 360 como principal
   ativarModo('360');
-  // define um ângulo inicial caso mude para ambientes
   setAngle(12);
 })();
 </script>
